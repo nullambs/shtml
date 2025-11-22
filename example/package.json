@@ -1,0 +1,19 @@
+{
+  "name": "shtml-example",
+  "version": "1.0.0",
+  "description": "",
+  "license": "MIT",
+  "author": "",
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "devDependencies": {
+    "vite": "^7.2.4",
+    "vite-plugin-wasm": "^3.5.0"
+  },
+  "dependencies": {
+    "@nullambs/shtml": "^0.0.3"
+  }
+}

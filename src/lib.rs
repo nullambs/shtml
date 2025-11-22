@@ -4,7 +4,7 @@ use pest::{
 };
 use pest_derive::Parser;
 use wasm_bindgen::prelude::*;
-use web_sys::{Element, console, HtmlElement, window};
+use web_sys::{Element, HtmlElement, window};
 
 #[derive(Debug)]
 struct Attribute<'a> {
@@ -14,7 +14,7 @@ struct Attribute<'a> {
 
 #[derive(Debug)]
 enum Nodes<'a> {
-    Elements {
+    Element {
         name: &'a str,
         id: Option<&'a str>,
         class: Vec<&'a str>,
@@ -30,7 +30,7 @@ enum Nodes<'a> {
 #[grammar = "shtml.pest"]
 struct ShtmlParser;
 
-fn process_tag<'a>(pairs: &mut Pairs<'a, Rule>) -> Nodes<'a> {
+fn process_tag<'a>(pairs: &mut Pairs<'a, Rule>) -> Result<Nodes<'a>, JsValue> {
     let mut name: &str = "";
     let mut id: Option<&str> = None;
     let mut class: Vec<&str> = Vec::new();
@@ -58,12 +58,11 @@ fn process_tag<'a>(pairs: &mut Pairs<'a, Rule>) -> Nodes<'a> {
                     }
 
                     if attr.name.is_none() {
-                        console::warn_1(&format!(
+                        return Err(JsValue::from(format!(
                             "Failed to parse attribute {} of {}",
                             attribute_span,
-                            element_span).into()
-                        );
-                        continue;
+                            element_span.to_string()
+                        )));
                     }
 
                     attributes.push(attr);
@@ -72,7 +71,7 @@ fn process_tag<'a>(pairs: &mut Pairs<'a, Rule>) -> Nodes<'a> {
             Rule::inner_html => {
                 for inner in element.into_inner() {
                     match inner.as_rule() {
-                        Rule::tag => children.push(process_tag(&mut inner.into_inner())),
+                        Rule::tag => children.push(process_tag(&mut inner.into_inner())?),
                         Rule::inner_text => children.push(Nodes::Text {
                             value: inner.as_str(),
                         }),
@@ -84,85 +83,93 @@ fn process_tag<'a>(pairs: &mut Pairs<'a, Rule>) -> Nodes<'a> {
         }
     }
 
-    Nodes::Elements {
+    Ok(Nodes::Element {
         name,
         id,
         class,
         children,
         attributes,
-    }
+    })
 }
 
-fn process_document<'a>(pairs: &mut Pairs<'a, Rule>) -> Vec<Nodes<'a>> {
+fn process_document<'a>(pairs: &mut Pairs<'a, Rule>) -> Result<Vec<Nodes<'a>>, JsValue> {
     let mut result = Vec::new();
 
     for pair in pairs {
         match pair.as_rule() {
-            Rule::tag => result.push(process_tag(&mut pair.into_inner())),
+            Rule::tag => result.push(process_tag(&mut pair.into_inner())?),
             _ => {}
         }
     }
 
-    return result;
+    return Ok(result);
 }
-fn create_elements(tree: &Nodes, attach_to: &Element) {
+
+fn create_elements(tree: &Nodes, attach_to: &Element) -> Result<(), JsValue> {
     let window = window().expect("Could not resolve window");
     let document = window.document().expect("Could not resolve document");
 
     match tree {
-        Nodes::Elements { name, id, class, children, attributes } => {
-            let mut element = document.create_element(name.trim()).expect("Failed to create element");
+        Nodes::Element { name, id, class, children, attributes } => {
+            let mut element = document.create_element(name.trim())?;
             element.set_class_name(class.join(" ").as_str());
             for attribute in attributes {
                 element
-                    .set_attribute(attribute.name.unwrap(), attribute.value.unwrap_or(""))
-                    .expect("Failed to set tag attribute");
+                    .set_attribute(attribute.name.unwrap(), attribute.value.unwrap_or(""))?;
             }
             
-            match id {
-                Some(v) => element.set_id(v),
-                None => {}
+            if let Some(id) = id {
+                element.set_id(id);
             }
-            
-            children.iter().for_each(|c| {
-                create_elements(c, &mut element);
-            });
 
-            attach_to.append_child(&element).expect("Failed to attach child");
+            for child in children {
+                create_elements(child, &mut element)?;
+            }
+
+            attach_to.append_child(&element)?;
         },
         Nodes::Text { value } => {
             let element = document.create_text_node(value);
-            attach_to.append_child(&element).expect("Failed to attach text node");
+            attach_to.append_child(&element)?;
         }
     }
+
+    Ok(())
 }
 
 #[wasm_bindgen]
-pub fn parse(shtml: &str, attach_to: &Element) {
-    let mut pairs = ShtmlParser::parse(Rule::tag, shtml)
-        .unwrap_or_else(|e| {
-            console::error_1(&format!("{}", e).into());
-            panic!();
-        });
-    let elements = process_document(&mut pairs);
-    for el in &elements {
-        create_elements(&el, &attach_to);
+pub fn parse(shtml: &str, attach_to: &Element) -> Result<(), JsValue> {
+    let shtml = ShtmlParser::parse(Rule::shtml, shtml)
+        .map_err(|e| {
+            JsValue::from(format!("{}", e))
+        })?;
+
+    for tag in shtml {
+        let elements = process_document(&mut tag.into_inner())?;
+
+        for el in &elements {
+            create_elements(&el, &attach_to)?;
+        }
     }
+
+    Ok(())
 }
 
 #[wasm_bindgen(start)]
-pub fn start() {
+pub fn start() -> Result<(), JsValue> {
     let window = window().expect("Could not resolve window");
     let document = window.document().expect("Could not resolve document");
 
-    let nodes = document.query_selector_all("[shtml]").expect("Failed to query shtml nodes");
+    let nodes = document.query_selector_all("[shtml]")?;
     for x in 0..nodes.length() {
-        let node = nodes.item(x).expect("Failed to iterate through shtml nodes");
+        let node = nodes.item(x).ok_or("No node")?;
         if let Some(element) = node.dyn_ref::<HtmlElement>() {
             let inner_text = element.inner_text();
             element.set_inner_html("");
-            parse(&inner_text, &element);
+            parse(&inner_text, &element)?;
         }
     }
+
+    Ok(())
 }
 
