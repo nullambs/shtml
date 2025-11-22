@@ -14,10 +14,19 @@
     </style>
   </head>
   <body>
-    <div id="app-root" shtml>
+    <div shtml>
       div.test {
-        p#pp { { this is my test 1 } }
-        p { { this is my test 2 } }
+        button#pp [
+          onclick="alert('Hello')"
+        ] {
+          { this is my test 1 }
+        }
+
+        p [
+          style="height:100px;"
+        ] {
+          { this is my test 2 }
+        }
       }
     </div>
     <script type="module">

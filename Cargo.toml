@@ -19,3 +19,8 @@ wasm-bindgen-test = "0.3.55"
 [dependencies.web-sys]
 version = "0.3.82"
 features = [ "console", "Document", "HtmlElement", "Window", "Text", "NodeList" ]
+
+[package.metadata.wasm-pack.profile.release]
+wasm-opt = [
+  "-O4", "-Oz" 
+]

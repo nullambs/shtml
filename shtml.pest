@@ -7,7 +7,11 @@ tag_classid = _{ (ASCII_ALPHANUMERIC | "-" | "_")+ }
 tag_name = { (ASCII_ALPHANUMERIC | "-")+ }
 tag_class = { tag_classid }
 tag_id = { tag_classid }
+tag_attributes = { "[" ~ attribute* ~ "]" }
+attribute_name = { (":" | "*")? ~ (ASCII_ALPHANUMERIC | "-" | "_")+ }
+attribute_value = { ("\\\"" | (!("\"") ~ ANY))* }
+attribute = { attribute_name ~ ("=" ~ "\"" ~ attribute_value ~ "\"")? }
 
 inner_text = { (!("{" | "}") ~ ANY)+ }
 inner_html = { "{" ~ (tag | ("{" ~ inner_text ~ "}") )* ~ "}" }
-tag = { tag_name ~ ("#" ~ tag_id)? ~ ("." ~ tag_class)* ~ inner_html }
+tag = { tag_name ~ ("#" ~ tag_id)? ~ ("." ~ tag_class)* ~ tag_attributes? ~ inner_html }
