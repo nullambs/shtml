@@ -1,8 +1,8 @@
 [package]
 name = "shtml"
 version = "0.0.0"
-authors = ["nullambs <null@ambs.dev>"]
-description = "xml-les[S] [HTML]"
+authors = ["nullambs <null@ambs.cc>"]
+description = "CSS-i[SH] H[TML]"
 license = "MIT/Apache-2.0"
 repository = "https://github.com/nullambs/shtml"
 edition = "2024"
