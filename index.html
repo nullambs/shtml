@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en-US">
+  <head>
+    <meta charset="utf-8" />
+    <title>shtml</title>
+    <style>
+      .test {
+        background-color: green;
+      }
+
+      #pp {
+        color: white;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app-root" shtml>
+      div.test {
+        p#pp { { this is my test 1 } }
+        p { { this is my test 2 } }
+      }
+    </div>
+    <script type="module">
+      import init from "./pkg/shtml.js";
+      init();
+    </script>
+  </body>
+</html>

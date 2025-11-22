@@ -1,0 +1,13 @@
+WHITESPACE = _{ " " | "\t" | "\r" | "\n" }
+
+doctype = { "<!DOCTYPE " ~ ASCII_ALPHANUMERIC ~ ">" }
+
+tag_classid = _{ (ASCII_ALPHANUMERIC | "-" | "_")+ }
+
+tag_name = { (ASCII_ALPHANUMERIC | "-")+ }
+tag_class = { tag_classid }
+tag_id = { tag_classid }
+
+inner_text = { (!("{" | "}") ~ ANY)+ }
+inner_html = { "{" ~ (tag | ("{" ~ inner_text ~ "}") )* ~ "}" }
+tag = { tag_name ~ ("#" ~ tag_id)? ~ ("." ~ tag_class)* ~ inner_html }
